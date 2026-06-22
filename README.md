@@ -1,37 +1,42 @@
-📦 telegram-terabox-bot
-A Telegram bot that connects directly to your TeraBox cloud account to upload, list, download, delete and manage files automatically — all from inside Telegram!
+✅ Step 1: Sahi README.md (Copy-Paste Ready)
+Bas is poore box ko copy karke apni README.md mein paste kar de. Isme saare headings, code blocks, tables bilkul set hain.
 
-⚙️ Built with Python · Uses reverse‑engineered TeraBox APIs · Works 24/7 on Render.com
+markdown
+# 📦 telegram-terabox-bot
 
-✨ Features
-🔐 Login to TeraBox using your email and password (no API token required)
+A Telegram bot that connects directly to your **TeraBox cloud account** to upload, list, download, delete and manage files automatically — all from inside Telegram!
 
-📤 Upload any file (photo, video, document) directly from Telegram to your TeraBox
+> ⚙️ Built with Python · Uses reverse‑engineered TeraBox APIs · Works 24/7 on **Render.com**
 
-📂 List all files in your root folder with file IDs and sizes
+---
 
-📥 Download any file from TeraBox to Telegram using its file ID
+## ✨ Features
 
-📁 Create new folders in your TeraBox
+- 🔐 **Login** to TeraBox using your email and password (no API token required)
+- 📤 **Upload** any file (photo, video, document) directly from Telegram to your TeraBox
+- 📂 **List** all files in your root folder with file IDs and sizes
+- 📥 **Download** any file from TeraBox to Telegram using its file ID
+- 📁 **Create** new folders in your TeraBox
+- 🗑️ **Delete** unwanted files
+- 🔄 **Automatic session** handling – no need to log in again
+- ☁️ **Deploy for free** on Render.com with a single click
 
-🗑️ Delete unwanted files
+---
 
-🔄 Automatic session handling – no need to log in again
+## 🧾 Prerequisites
 
-☁️ Deploy for free on Render.com with a single click
-
-🧾 Prerequisites
 Before you start, make sure you have:
 
-A TeraBox account (free or premium) with email and password – no 2‑Factor Authentication enabled.
+1. A **TeraBox account** (free or premium) with email and password – **no 2‑Factor Authentication** enabled.
+2. A **Telegram Bot Token** – obtain one from [@BotFather](https://t.me/botfather) on Telegram.
+3. (Optional) A **GitHub account** to host your code for deployment.
 
-A Telegram Bot Token – obtain one from @BotFather on Telegram.
+---
 
-(Optional) A GitHub account to host your code for deployment.
+## 🛠️ Setup Locally (for testing)
 
-🛠️ Setup Locally (for testing)
-1. Clone or create the project folder
-bash
+### 1. Clone or create the project folder
+```bash
 mkdir telegram-terabox-bot
 cd telegram-terabox-bot
 2. Create the required files
@@ -44,8 +49,6 @@ terabox_api.py – TeraBox API client
 requirements.txt – Python dependencies
 
 Procfile – for Render deployment
-
-.env.example – example environment variables (optional)
 
 (All code is provided in the repository – just copy and paste.)
 
@@ -159,7 +162,6 @@ telegram-terabox-bot/
 ├── terabox_api.py        # TeraBox API client (login, upload, list, download, delete, mkdir)
 ├── requirements.txt      # Python dependencies
 ├── Procfile              # Render start command (worker: python bot.py)
-├── .env.example          # Sample environment variables (never commit .env)
 └── README.md             # This file
 ⚠️ Important Notes
 This bot uses unofficial, reverse‑engineered TeraBox APIs. TeraBox may change their endpoints at any time, which could temporarily break the bot. We will try to keep the code updated.
@@ -184,3 +186,198 @@ python-telegram-bot
 Requests
 
 Enjoy seamless TeraBox management from your Telegram! 🚀
+
+text
+
+---
+
+## ✅ Step 2: Poori Project ZIP Banane Ka Tarika (Manual)
+
+Main tujhe **har file ka content** de raha hoon. Tu in sabko **ek folder mein** save kar, aur fir **ZIP** bana le.
+
+### 📁 Folder Structure:
+telegram-terabox-bot/
+├── bot.py
+├── terabox_api.py
+├── requirements.txt
+├── Procfile
+└── README.md
+
+text
+
+---
+
+### 1. `bot.py`
+```python
+import logging
+import os
+import asyncio
+from typing import Optional
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    filters
+)
+
+from terabox_api import TeraBoxClient
+
+# ============= CONFIGURATION =============
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+TERABOX_EMAIL = os.getenv("TERABOX_EMAIL")
+TERABOX_PASSWORD = os.getenv("TERABOX_PASSWORD")
+
+if not all([BOT_TOKEN, TERABOX_EMAIL, TERABOX_PASSWORD]):
+    logger.error("Missing environment variables! Please set BOT_TOKEN, TERABOX_EMAIL, TERABOX_PASSWORD")
+    exit(1)
+
+# Initialize TeraBox Client
+try:
+    terabox = TeraBoxClient(TERABOX_EMAIL, TERABOX_PASSWORD)
+    logger.info("✅ TeraBox client initialized successfully")
+except Exception as e:
+    logger.error(f"❌ Failed to initialize TeraBox client: {e}")
+    exit(1)
+
+# ============= BOT HANDLERS =============
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a welcome message with available commands"""
+    welcome_text = """
+🚀 **Welcome to TeraBox Bot!**
+
+I can help you manage your TeraBox files directly from Telegram.
+
+**Available Commands:**
+/start - Show this message
+/list - List files in your TeraBox
+/upload - Upload a file (reply to a file with /upload)
+/download - Download a file (use /download <file_id>)
+/mkdir - Create a new folder (use /mkdir <folder_name>)
+/delete - Delete a file (use /delete <file_id>)
+/help - Show detailed help
+
+**How to use:**
+• Send any file to upload it to TeraBox
+• Use /list to see your files
+• Use /download <file_id> to download a file
+"""
+    await update.message.reply_text(welcome_text, parse_mode="Markdown")
+
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show detailed help"""
+    help_text = """
+📖 **Detailed Help**
+
+**Upload Files:**
+Just send any file (photo, video, document) and it will be automatically uploaded to TeraBox.
+
+**List Files:**
+Use /list to see all files in your root directory.
+
+**Download Files:**
+Use /download <file_id> - You can get file_id from /list command.
+
+**Create Folder:**
+Use /mkdir <folder_name> to create a new folder.
+
+**Delete File:**
+Use /delete <file_id> to delete a file.
+
+**File IDs:**
+When you use /list, you'll see each file with its ID in parentheses.
+Example: `myfile.jpg (ID: 123456789)`
+"""
+    await update.message.reply_text(help_text, parse_mode="Markdown")
+
+
+async def list_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """List files from TeraBox"""
+    try:
+        await update.message.reply_text("📂 Fetching your files...")
+        
+        files = terabox.list_files(limit=50)
+        
+        if not files:
+            await update.message.reply_text("📭 No files found in your TeraBox.")
+            return
+        
+        # Format the response
+        reply = "📁 **Your Files:**\n\n"
+        for item in files:
+            icon = "📁" if item.get("isdir") == 1 else "📄"
+            name = item.get("name", "Unknown")
+            file_id = item.get("fs_id", "N/A")
+            size = item.get("size", 0)
+            
+            # Format size
+            if size > 1024 * 1024 * 1024:
+                size_str = f"{size / (1024*1024*1024):.2f} GB"
+            elif size > 1024 * 1024:
+                size_str = f"{size / (1024*1024):.2f} MB"
+            elif size > 1024:
+                size_str = f"{size / 1024:.2f} KB"
+            else:
+                size_str = f"{size} B"
+            
+            reply += f"{icon} `{name}`\n"
+            reply += f"   📎 ID: `{file_id}` | 📦 Size: {size_str}\n\n"
+        
+        # Split long messages
+        if len(reply) > 4000:
+            parts = [reply[i:i+4000] for i in range(0, len(reply), 4000)]
+            for part in parts:
+                await update.message.reply_text(part, parse_mode="Markdown")
+        else:
+            await update.message.reply_text(reply, parse_mode="Markdown")
+            
+    except Exception as e:
+        logger.error(f"List error: {e}")
+        await update.message.reply_text(f"❌ Error: {str(e)}")
+
+
+async def download_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Download a file from TeraBox"""
+    try:
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Please provide a file ID.\n"
+                "Usage: `/download <file_id>`\n"
+                "Get file IDs from /list command.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        file_id = context.args[0]
+        await update.message.reply_text(f"⬇️ Downloading file (ID: {file_id})...")
+        
+        file_content = terabox.download_file(file_id)
+        
+        # Try to get filename from list
+        files = terabox.list_files(limit=100)
+        filename = "downloaded_file"
+        for f in files:
+            if str(f.get("fs_id")) == str(file_id):
+                filename = f.get("name", "downloaded_file")
+                break
+        
+        await update.message.reply_document(
+            document=file_content,
+            filename=filename,
+            caption=f"✅ Downloaded from TeraBox\nFile ID: {file_id}"
+        )
+        
+    except Exception as e:
+        logger.error(f"Download error: {e}")
+        await update.message.reply_text(f"❌ Download failed: {str(e)}
